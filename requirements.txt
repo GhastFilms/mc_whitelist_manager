@@ -1,0 +1,4 @@
+wheel
+mcipc
+discord.py
+python-dotenv
