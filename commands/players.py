@@ -7,9 +7,16 @@ class command:
     name = 'players'
 
     required_permissions = 0
+
+    dclient = None
+
+    def __init__(self, dclient):
+        self.dclient = dclient
     
-    async def run(self, dclient, message):
-        conf = dclient.config
+    async def run(self, message):
+        
+        conf = self.dclient.config
+        
         try:
             with Client(conf.RCON_HOST, conf.RCON_PORT) as c:
                 if not c.login(conf.RCON_PASSWORD):
@@ -23,6 +30,7 @@ class command:
                     elif len(i) == 11:
                         r = i[10]
                     else:
+                        # takes the usernames of all connected players makes a string seperating each name with a comma
                         r = i[10]
                         for x in i[11:]:
                             r = r + " " + x

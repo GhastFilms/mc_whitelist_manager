@@ -7,10 +7,15 @@ class command:
     name = 'playercount'
 
     required_permissions = 0
-
-    async def run(self, dclient, message):
     
-        conf = dclient.config
+    dclient = None
+
+    def __init__(self, dclient):
+        self.dclient = dclient
+
+    async def run(self, message):
+    
+        conf = self.dclient.config
     
         try:
             with Client(conf.RCON_HOST, conf.RCON_PORT) as c:

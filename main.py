@@ -10,8 +10,6 @@ if os.path.isfile("./.env") is True:
 
 from config import BotConfig
 
-client = discord.Client()
-
 async def whitelist_from_channel(dclient, message):
     
     conf = dclient.config
@@ -56,7 +54,18 @@ async def command_handler(client, command, message):
     req_perms = cmd_class.required_permissions
 
     if (((req_perms == 1) and (message.author.guild_permissions.administrator is True)) or (req_perms == 0)):
-        await cmd_class.run(client, message)
+        await cmd_class.run(message)
+
+def is_command(cmd):
+    has_run = hasattr(cmd, "run")
+    has_name = hasattr(cmd, "name")
+    has_permissions  = hasattr(cmd, "required_permissions")
+
+    if has_run and has_name and has_permissions:
+        return True
+    else: 
+        return False
+
 
 class Bot(discord.Client):
 
@@ -68,18 +77,10 @@ class Bot(discord.Client):
         for i in f:
             if i[-3:] == ".py":
                 w = __import__(('commands.'+ i[:-3]), fromlist=['command'])
-                c = w.command()
-                try:
-                    c.run
-                    c.command_name
-                    c.required_permissions
-                except NameError:
-                    print("Not in scope!")
-                else:
-                    print("In scope: " + c.name)
+                if is_command(w.command):
+                    c = w.command(self)
                     self.command_map[c.name] = c
-
-
+                    
     async def on_ready(self):
 
         self.config = BotConfig()
@@ -95,8 +96,6 @@ class Bot(discord.Client):
 
     async def on_message(self, message):
         command = self.get_command(message)
-
-        print(message.author.guild_permissions)
 
         # if the message is in the whitelist channel then do this
         
