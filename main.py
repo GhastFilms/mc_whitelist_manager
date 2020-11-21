@@ -48,20 +48,15 @@ async def whitelist_from_channel(dclient, message):
 
 # main functions
 
-async def command_handler(client, command, is_admin, message):
-    cmd_pair = client.command_map.get(command)
-    if cmd_pair is None:
+async def command_handler(client, command, message):
+    cmd_class = client.command_map.get(command)
+    if cmd_class is None:
         return 0
-    req_admin = cmd_pair[0]
+    
+    req_perms = cmd_class.required_permissions
 
-    if (((req_admin is True) and (is_admin is True)) or (req_admin is False)):
-        await cmd_pair[1].run(cmd_pair[1], client, message)
-
-def is_user_admin(message):
-    user_perms = message.author.guild_permissions
-    if user_perms.administrator:
-        return True
-    return False
+    if (((req_perms == 1) and (message.author.guild_permissions.administrator is True)) or (req_perms == 0)):
+        await cmd_class.run(client, message)
 
 class Bot(discord.Client):
 
@@ -70,19 +65,19 @@ class Bot(discord.Client):
 
     def regiester_commands(self):
         f = os.listdir("./commands")
-        print(f)
         for i in f:
-            print(i)
             if i[-3:] == ".py":
                 w = __import__(('commands.'+ i[:-3]), fromlist=['command'])
+                c = w.command()
                 try:
-                    w.command.run
-                    w.command.command_name
+                    c.run
+                    c.command_name
+                    c.required_permissions
                 except NameError:
                     print("Not in scope!")
                 else:
-                    print("In scope: " + w.command.command_name)
-                    self.command_map[w.command.command_name] = (False, w.command)
+                    print("In scope: " + c.name)
+                    self.command_map[c.name] = c
 
 
     async def on_ready(self):
@@ -90,14 +85,18 @@ class Bot(discord.Client):
         self.config = BotConfig()
 
         self.regiester_commands()
+
+        print("loaded commands: ")
+        print(self.command_map.keys())
         
         print(f'{client.user} has connected')
 
-        print("command map:")
-        print(self.command_map)
+        
 
     async def on_message(self, message):
         command = self.get_command(message)
+
+        print(message.author.guild_permissions)
 
         # if the message is in the whitelist channel then do this
         
@@ -105,9 +104,10 @@ class Bot(discord.Client):
         
         if (str(message.channel.id) == str(self.config.whitelist_channel)) and not (message.author.id == self.user.id):
             await whitelist_from_channel(self, message)
+            return 0
             
         if command is not None:
-            await command_handler(self, command, is_user_admin(message), message)
+            await command_handler(self, command, message)
 
     def get_command(self, message):
         if message.content.startswith(self.config.prefix):

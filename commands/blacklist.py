@@ -3,7 +3,10 @@ import socket
 from mcipc.rcon import Client
 
 class command:
-    command_name = 'blacklist'
+
+    name = 'blacklist'
+
+    required_permissions = 1
 
     async def run(self, dclient, message):
         conf = dclient.config

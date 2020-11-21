@@ -3,7 +3,10 @@ import socket
 from mcipc.rcon import Client
 
 class command:
-    command_name = 'players'
+
+    name = 'players'
+
+    required_permissions = 0
     
     async def run(self, dclient, message):
         conf = dclient.config
