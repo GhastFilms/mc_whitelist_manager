@@ -4,6 +4,7 @@ import socket
 from mcipc.rcon import Client
 import sys
 import os
+import logging
 
 from botConfig import BotConfig
 
@@ -19,7 +20,7 @@ async def whitelist_from_channel(dclient, message):
     try:
         with Client(conf.RCON_HOST, conf.RCON_PORT) as c:
             if not c.login(conf.RCON_PASSWORD):
-                print("Failed to login to the minecraft server")
+                logging.warn("Failed to login to the minecraft server")
                 await message.channel.send("Failed to login to the minecraft , try again later")
             else:
                 r = c.run("whitelist add " + player)
@@ -34,7 +35,7 @@ async def whitelist_from_channel(dclient, message):
                     await dclient.get_channel(dclient.whitelist_log_channel).send("fail to whitelisted " + "<@" + str(message.author.id) + ">. message: \"" + r + "\"")                
 
     except socket.timeout:
-        print("Connection to the minecraft server timed out after")
+        logging.warn("Connection to the minecraft server timed out after")
         await message.channel.send("Connection to the minecraft server timed out")
 
 
@@ -69,20 +70,25 @@ class BotClient(discord.Client):
     command_map = {}
 
     def regiester_commands(self):
+        logging.debug("Registering commands...")
         f = os.listdir("./src/commands")
         for i in f:
             if i[-3:] == ".py":
+                
                 w = __import__(('commands.'+ i[:-3]), fromlist=['Command'])
                 if is_command(w.Command):
                     c = w.Command(self)
                     self.command_map[c.name] = c
+                    logging.debug("Registered command located in " + w.name)
+                else:
+                    logging.warning("failed to register command located in file: " + i)
                     
     async def on_ready(self):
-        print(f'{self.user} has connected')
-
+        logging.info(f'{self.user} has connected')
         
 
     async def on_message(self, message):
+        logging.debug("processing message: " + message)
         command = self.get_command(message)
 
         # if the message is in the whitelist channel then do this
