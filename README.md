@@ -3,4 +3,4 @@
 Whitelister is a discord bot for managing whitelists on minecraft servers
 
 ## License
-[MIT](https://choosealicense.com/licenses/mit/)
+[GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
