@@ -78,14 +78,6 @@ class BotClient(discord.Client):
                     self.command_map[c.name] = c
                     
     async def on_ready(self):
-
-        self.config = BotConfig()
-
-        self.regiester_commands()
-
-        print("loaded commands: ")
-        print(self.command_map.keys())
-        
         print(f'{self.user} has connected')
 
         
