@@ -1,14 +1,11 @@
-import os
+
 import discord
 import socket
 from mcipc.rcon import Client
 import sys
+import os
 
-if os.path.isfile("./.env") is True:
-    from dotenv import load_dotenv
-    load_dotenv()
-
-from config import BotConfig
+from botConfig import BotConfig
 
 async def whitelist_from_channel(dclient, message):
     
@@ -41,7 +38,6 @@ async def whitelist_from_channel(dclient, message):
         await message.channel.send("Connection to the minecraft server timed out")
 
 
-
 # the value pair contains if the command requires admin and the function to run the command
 
 # main functions
@@ -67,18 +63,18 @@ def is_command(cmd):
         return False
 
 
-class Bot(discord.Client):
+class BotClient(discord.Client):
 
     config = BotConfig
     command_map = {}
 
     def regiester_commands(self):
-        f = os.listdir("./commands")
+        f = os.listdir("./src/commands")
         for i in f:
             if i[-3:] == ".py":
-                w = __import__(('commands.'+ i[:-3]), fromlist=['command'])
-                if is_command(w.command):
-                    c = w.command(self)
+                w = __import__(('commands.'+ i[:-3]), fromlist=['Command'])
+                if is_command(w.Command):
+                    c = w.Command(self)
                     self.command_map[c.name] = c
                     
     async def on_ready(self):
@@ -90,7 +86,7 @@ class Bot(discord.Client):
         print("loaded commands: ")
         print(self.command_map.keys())
         
-        print(f'{client.user} has connected')
+        print(f'{self.user} has connected')
 
         
 
@@ -114,14 +110,3 @@ class Bot(discord.Client):
         else:
             return None
 
-
-
-if __name__ == "__main__":
-    client = Bot()
-    token = os.getenv("TOKEN")
-
-    if token is None:
-        print("discord token env var is missing")
-        exit(0)
-    
-    client.run(token)

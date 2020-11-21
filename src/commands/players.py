@@ -2,7 +2,7 @@ import discord
 import socket
 from mcipc.rcon import Client
 
-class command:
+class Command:
 
     name = 'players'
 
