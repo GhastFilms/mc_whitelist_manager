@@ -79,7 +79,7 @@ class BotClient(discord.Client):
                 if is_command(w.Command):
                     c = w.Command(self)
                     self.command_map[c.name] = c
-                    logging.debug("Registered command located in " + w.name)
+                    logging.debug("Registered command located in " + c.name)
                 else:
                     logging.warning("failed to register command located in file: " + i)
                     
@@ -88,7 +88,7 @@ class BotClient(discord.Client):
         
 
     async def on_message(self, message):
-        logging.debug("processing message: " + message)
+        #logging.debug("processing message: " + str(Message))
         command = self.get_command(message)
 
         # if the message is in the whitelist channel then do this

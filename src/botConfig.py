@@ -3,11 +3,13 @@ import logging
 
 class BotConfig:
     prefix = ''
+    
+    whitelist_channel = 0
+    whitelist_log_channel = 0
+
     RCON_HOST = ''
     RCON_PORT = 0
     RCON_PASSWORD = ''
-    whitelist_channel = 0
-    whitelist_log_channel = 0
     
     def __init__(self):   
 
@@ -59,3 +61,34 @@ class BotConfig:
             except ValueError:
                 logging.warn("whitelist channel could not be converted to int")
                 self.whitelist_log_channel = 0
+
+
+class dbConfig:
+    host = None
+    user = None
+    password = None
+    port = None
+
+    pool = None
+
+    def __init__(self):
+        self.host = os.getenv("DB_HOST")
+        self.user = os.getenv("DB_USER")
+        self.password = os.getenv("DB_PASSWORD")
+        self.port = os.getenv("DB_PORT")
+
+        if self.host is None:
+            logging.error("DB_HOST env var missing, exiting")
+            exit(0)
+        
+        if self.user is None:
+            logging.error("DB_USERNAME env var missing, exiting")
+            exit(0)
+
+        if self.password is None:
+            logging.error("DB_PASSWORD env var missing, exiting")
+            exit(0)
+        
+        if self.port is None:
+            logging.error("DB_PORT env var missing, exiting")
+            exit(0)
