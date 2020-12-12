@@ -68,8 +68,8 @@ class dbConfig:
     user = None
     password = None
     port = None
+    db = None
 
-    pool = None
 
     def __init__(self):
         self.host = os.getenv("DB_HOST")

@@ -1,11 +1,13 @@
 import discord
 import socket
-from mcipc.rcon import Client
-from datetime import date
 import logging
 import json
 import requests
 import re
+import redis
+from redisgraph import Node, Edge, Graph, Path
+from mcipc.rcon import Client
+from datetime import date
 
 class Command:
 
@@ -19,68 +21,100 @@ class Command:
         self.dclient = dclient
 
     async def run(self, message):
+
+        command = message.content.split(" ")[1]
+
+        if command == "help":
+            await message.channel.send("subcommands of the whitelist command are \"add\", \"help\", and \"remove\"")
+            return
         
-        x = message.content.split(" ")
-
-        #if len(x) >= 4:
-        #    end = re.search("as <(@\![1-9]*)>", x[-2] + " " + x[-1])
-        #    print(x[-2] + " " + x[-1])
-        #    print(x[:-2][2:])
-
-        
-    #async def add(self, message, player, disc_id):
-
-        if len(x) < 2:
-            await message.channel.send("provide a username to whitelist")
+        elif not ((command != "help") or (command != "add") or (command != "remove")):
+            await message.channel.send("invalid subcommand, use subcommand help to see valid subcommands")
             return
 
+        if command == "add":
+            await self.add(message)
+        elif command == "remove":
+            await self.remove(message)
+    
+    
+    # %whitelist add {} as {@}
+    async def add(self, message):
+        disc_id_search = re.search(r" as <\@\![0-9]*>", message.content)
+        uname_search = re.search(r"\b\ add\ \w+\ as\b ", message.content)
+
+        disc_id = None
+        player = None
+    
+        if disc_id_search is not None:
+            disc_id = disc_id_search.group()[7:][:-1]
+        else:
+            await message.channel.send("could not find the discord id in the message")
+            return
+    
+        if uname_search is not None:
+            player = uname_search.group()[5:][:-4]
+        else:
+            await message.channel.send("could not find the username in the message")
+            return
+        
+        # get the uuid of the given username and stop if its not a valid username
         y = mc_name_to_uuid(player)
         
         if y is None:
-            await message.channel.send("%s is not a valid minecraft username" % x[1]) 
+            await message.channel.send("%s is not a valid minecraft username" % player) 
             return
         
         player_uuid = y[0]
         player_name = y[1]            
 
         try:
-            conn = self.dclient.db.pool.getconn()
-
+            conn = redis.Redis(connection_pool=self.dclient.db.pool)
+            
             ret_msg = ''
         
             if conn:
+                g = Graph('Users', conn)
+
+                params = {'mc_uuid': player_uuid, 'discord_id': str(disc_id)}
+
+
+                ret = g.query("""
+                    OPTIONAL MATCH (m:McAccount {uuid:$mc_uuid})
+                    OPTIONAL MATCH (u:User {id:$discord_id})
+                    OPTIONAL MATCH (u)-[i:is]->(m)
+                    RETURN u, m, i
+                """, params)
+
+                x = ret.result_set[0]
+                print(x)
+                u = x[0]
+                m = x[1]
+                i = x[2]
+                db_query = ''
+
+                if u is not None:
+                    db_query = db_query + 'MATCH (u:User {id:$discord_id})\n'
+                if m is not None:
+                    db_query = db_query + 'MATCH (m:McAccount {uuid:$mc_uuid})\n'
+
+                if u is None:
+                    db_query = db_query + 'CREATE (u:User {id:$discord_id})\n'
+                if m is None:
+                    db_query = db_query + 'CREATE (m:McAccount {uuid:$mc_uuid})\n'
                 
-                cur = conn.cursor()
-
-                w = mc_uuids(conn, cur,message.author.id)
-
-                if w is not None:
-                    id = w[0]
-                    uuid = w[1]
-
-                    if player_uuid not in uuid:
-                        uuid_str = ''
-                        if len(uuid) == 1:
-                            uuid_str = uuid[0] + "," + player_uuid
-                        else:
-                            uuid_str = uuid[0]
-                            for x in uuid[1:]:
-                                uuid_str = uuid_str + "," + x
-                            uuid_str = uuid_str + "," + player_uuid
-
-                            print(uuid_str)
-
-                        cur.execute("UPDATE users SET mc_uuid = '{0}' WHERE id = {1};".format(uuid_str, str(id)))
-
-                        ret_msg = "Added {0} to the whitelist"
-                    else:
-                        ret_msg = "{0} is already on the whitelist"
-                    
-                else:
-                    cur.execute("INSERT INTO Users(discord_id, mc_uuid) VALUES ({0}, {1});".format(str(message.author.id), player_uuid))
+                
+                if i is not None:
+                    if (u is None) or (m is None):
+                        g.query(db_query, params)
+                        g.commit()
+                    ret_msg = "{0} is on the whitelist"
+                else: 
+                    db_query = db_query + 'CREATE (u)-[:is]->(m)'
+                    g.query(db_query, params)
+                    g.commit()
                     ret_msg = "Added {0} to the whitelist"
-                        
-                conn.commit() 
+                
             else:
                 raise Exception("failed to get db connection from pool")
 
@@ -88,8 +122,7 @@ class Command:
             logging.error("Error occured while attemping to whitelist {0}, error: {1}".format(player_name, err))
             ret_msg = "An error occured while trying to whitelist {0}, try again later"
         finally:
-            cur.close()
-            self.dclient.db.pool.putconn(conn)
+            conn.close()
             await message.channel.send(ret_msg.format(player_name))
         
         #try:
@@ -103,6 +136,59 @@ class Command:
         #except socket.timeout:
         #    print("Connection to the minecraft server timed out after")
         #    await message.channel.send("Connection to the minecraft server timed out")
+    # ^ whitelist remove
+    async def remove(self, message):
+        uname_search = message.content[18:]
+        print(uname_search)
+
+        player = None
+
+        if uname_search is not None:
+            player = uname_search
+        else:
+            await message.channel.send("could not find the username in the message")
+            return
+
+        y = mc_name_to_uuid(player)
+        
+        if y is None:
+            await message.channel.send("%s is not a valid minecraft username" % player) 
+            return
+
+        player_uuid = y[0]
+        player_name = y[1]
+        
+        try:
+            conn = redis.Redis(connection_pool=self.dclient.db.pool)
+            
+            ret_msg = ''
+        
+            if conn:
+                g = Graph('Users', conn)
+                params = {'mc_uuid': player_uuid}
+
+                ret = g.query("MATCH (:User)-[i:is]->(:McAccount {uuid:$mc_uuid}) DELETE i", params)
+
+                if len(ret.result_set):
+                    ret_msg = "eee"
+                    
+                else:
+                    ret_msg = "Removed {0} from the whitelist"
+                
+                g.commit()
+                
+            else:
+                raise Exception("failed to get db connection from pool")
+
+        except Exception as err:
+            logging.error("Error occured while attemping to remove {0} from the whitelist, error: {1}".format(player_name, err))
+            ret_msg = "An error occured while trying to remove {0} from the whitelist, try again later"
+        finally:
+            conn.close()
+            await message.channel.send(ret_msg.format(player_name))
+
+
+
 
 # returns None if there are no uuids, returns an tuple  of type (int, []) where the int is the users id and the list is a list of strings which are the uuids
 def mc_uuids(conn, cur, disc_id):
@@ -124,7 +210,7 @@ def mc_name_to_uuid(name):
         return None
 
 # returns None if there is no match if there is a match as tuple with the first element being the uuid and the second being the username
-def mc_uuid_to_name(uuid):  
+def mc_uuid_to_name(uuid):
     r = requests.get(url = ("https://api.mojang.com/user/profiles/{0}/names".format(uuid)))
     if r.status_code == 200:
         return (uuid, r.json()[-1]["name"])
