@@ -10,4 +10,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+HEALTHCHECK CMD discordhealthcheck || exit 1
+
 CMD [ "python", "./main.py" ]

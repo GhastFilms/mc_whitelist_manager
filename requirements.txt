@@ -2,3 +2,7 @@ wheel
 mcipc
 discord.py
 python-dotenv
+requests
+discordhealthcheck
+redis
+redisgraph

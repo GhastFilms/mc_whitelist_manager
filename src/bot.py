@@ -5,6 +5,9 @@ from mcipc.rcon import Client
 import sys
 import os
 import logging
+import discordhealthcheck
+from redisgraph import Graph, Node
+import redis
 
 from botConfig import BotConfig
 
@@ -69,6 +72,11 @@ class BotClient(discord.Client):
     config = BotConfig
     command_map = {}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.healthcheck_server = discordhealthcheck.start(self)
+
     def regiester_commands(self):
         logging.debug("Registering commands...")
         f = os.listdir("./src/commands")
@@ -79,7 +87,7 @@ class BotClient(discord.Client):
                 if is_command(w.Command):
                     c = w.Command(self)
                     self.command_map[c.name] = c
-                    logging.debug("Registered command located in " + w.name)
+                    logging.debug("Registered command located in " + c.name)
                 else:
                     logging.warning("failed to register command located in file: " + i)
                     
@@ -88,13 +96,12 @@ class BotClient(discord.Client):
         
 
     async def on_message(self, message):
-        logging.debug("processing message: " + message)
+        #logging.debug("processing message: " + str(Message))
         command = self.get_command(message)
 
         # if the message is in the whitelist channel then do this
         
         # for some stupid reason i have to convert both values to string to get them to compare right. without converting them even when they were the same python was saying that it was unequal
-        
         if (str(message.channel.id) == str(self.config.whitelist_channel)) and not (message.author.id == self.user.id):
             await whitelist_from_channel(self, message)
             return 0
