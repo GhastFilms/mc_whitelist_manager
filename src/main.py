@@ -7,8 +7,7 @@ from redisgraph import Graph
 import time
 
 from bot import BotClient
-from botConfig import BotConfig
-from botConfig import dbConfig
+from botConfig import BotConfig, dbConfig
 
 if __name__ == "__main__":
 
