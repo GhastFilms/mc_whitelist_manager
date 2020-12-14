@@ -66,6 +66,4 @@ if __name__ == "__main__":
         logging.warning("failed to create db pool, exiting")
         exit(0)
 
-    client.regiester_commands()
-    
     client.run(token)

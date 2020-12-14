@@ -9,6 +9,8 @@ import discordhealthcheck
 from redisgraph import Graph, Node
 import redis
 
+from commandHandler import CommandHandler
+
 from botConfig import BotConfig
 
 async def whitelist_from_channel(dclient, message):
@@ -46,26 +48,6 @@ async def whitelist_from_channel(dclient, message):
 
 # main functions
 
-async def command_handler(client, command, message):
-    cmd_class = client.command_map.get(command)
-    if cmd_class is None:
-        return 0
-    
-    req_perms = cmd_class.required_permissions
-
-    if (((req_perms == 1) and (message.author.guild_permissions.administrator is True)) or (req_perms == 0)):
-        await cmd_class.run(message)
-
-def is_command(cmd):
-    has_run = hasattr(cmd, "run")
-    has_name = hasattr(cmd, "name")
-    has_permissions  = hasattr(cmd, "required_permissions")
-
-    if has_run and has_name and has_permissions:
-        return True
-    else: 
-        return False
-
 
 class BotClient(discord.Client):
 
@@ -76,20 +58,9 @@ class BotClient(discord.Client):
         super().__init__(*args, **kwargs)
 
         self.healthcheck_server = discordhealthcheck.start(self)
+        self.command_handler = CommandHandler(self)
+        self.command_handler.load_commands()
 
-    def regiester_commands(self):
-        logging.debug("Registering commands...")
-        f = os.listdir("./src/commands")
-        for i in f:
-            if i[-3:] == ".py":
-                
-                w = __import__(('commands.'+ i[:-3]), fromlist=['Command'])
-                if is_command(w.Command):
-                    c = w.Command(self)
-                    self.command_map[c.name] = c
-                    logging.debug("Registered command located in " + c.name)
-                else:
-                    logging.warning("failed to register command located in file: " + i)
                     
     async def on_ready(self):
         logging.info(f'{self.user} has connected')
@@ -107,7 +78,7 @@ class BotClient(discord.Client):
             return 0
             
         if command is not None:
-            await command_handler(self, command, message)
+            await self.command_handler.run_command(command, message)
 
     def get_command(self, message):
         if message.content.startswith(self.config.prefix):
