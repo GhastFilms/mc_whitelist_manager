@@ -3,13 +3,14 @@
 import os
 import sys
 
+# command imports
 sys.path.append(os.path.abspath("./src/commands/"))
-
 import blacklist
 import help
 import playercount
 import players
 import whitelist
+import redis
 
 class CommandHandler:
     command_map = {}
@@ -51,11 +52,30 @@ class CommandHandler:
             return False            
     
     async def run_command(self, command_name, message):
+        db_conn = redis.Redis(connection_pool=self.dclient.db.pool)
+        id = db_conn.get("owner_id")
+        is_owner = False
+        if id is not None:
+            if int(id.decode()) == message.author.id:
+                is_owner = True
+            
+
+        #db_conn.set("x", 3)
+
         cmd_class = self.command_map.get(command_name)
         if cmd_class is None:
             return 0
         # this is static to administrator permissions as of rn but later most of this will be changed
+        
         req_perms = cmd_class.required_permissions
 
-        if (((req_perms == 1) and (message.author.guild_permissions.administrator is True)) or (req_perms == 0)):
+        if (((req_perms == 1) and (message.author.guild_permissions.administrator is True)) or (req_perms == 0)) or is_owner == True:
             await cmd_class.run(message)
+'''
+command:
+    module_id: string
+    name: string
+    default permission: enum
+    
+
+'''

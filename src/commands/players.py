@@ -6,7 +6,7 @@ class Command:
 
     name = 'players'
 
-    required_permissions = 0
+    required_permissions = 3
 
     dclient = None
 

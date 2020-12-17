@@ -132,7 +132,6 @@ class Command:
     # ^ whitelist remove
     async def remove(self, message):
         uname_search = message.content[18:]
-        print(uname_search)
 
         player = None
 
