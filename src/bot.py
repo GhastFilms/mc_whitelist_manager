@@ -59,8 +59,6 @@ class BotClient(discord.Client):
 
         self.healthcheck_server = discordhealthcheck.start(self)
         self.command_handler = CommandHandler(self)
-        self.command_handler.load_commands()
-
                     
     async def on_ready(self):
         logging.info(f'{self.user} has connected')

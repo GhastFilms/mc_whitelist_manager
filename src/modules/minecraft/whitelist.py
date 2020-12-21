@@ -22,6 +22,9 @@ class Command:
         self.dclient = dclient
 
     async def run(self, message):
+        if len(message.content.split(" ")) < 2:
+            await message.channel.send("specifiy subcommand")
+            return
 
         command = message.content.split(" ")[1]
 

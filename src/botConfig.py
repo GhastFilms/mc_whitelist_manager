@@ -62,14 +62,12 @@ class BotConfig:
                 logging.warn("whitelist channel could not be converted to int")
                 self.whitelist_log_channel = 0
 
-
 class dbConfig:
     host = None
     user = None
     password = None
     port = None
     db = None
-
 
     def __init__(self):
         self.host = os.getenv("DB_HOST")
