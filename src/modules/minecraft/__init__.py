@@ -5,9 +5,7 @@ import playercount
 import players
 import whitelist
 
-class Module:
-    module_id = 1
-    module_name = "minecraft"
+from command import ModuleBuilder
 
-    def get_commands(self):
-        return [whitelist.Command]
+def get_module():
+    return ModuleBuilder("minecraft", 2).add_command("whitelist", whitelist.get_dir()).build()

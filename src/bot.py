@@ -9,7 +9,8 @@ import discordhealthcheck
 from redisgraph import Graph, Node
 import redis
 
-from commandHandler import CommandHandler
+from command import CommandHandlerBuilder
+from modules import get_modules
 
 from botConfig import BotConfig
 
@@ -52,31 +53,75 @@ async def whitelist_from_channel(dclient, message):
 class BotClient(discord.Client):
 
     config = BotConfig
-    command_map = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.healthcheck_server = discordhealthcheck.start(self)
-        self.command_handler = CommandHandler(self)
+        cmd_handler_builder = CommandHandlerBuilder(self)
+        mods = get_modules()
+        for mod in mods:
+            cmd_handler_builder.add_module(mod)
+        self.command_handler = cmd_handler_builder.build()
+
                     
     async def on_ready(self):
         logging.info(f'{self.user} has connected')
         
 
     async def on_message(self, message):
-        #logging.debug("processing message: " + str(Message))
-        command = self.get_command(message)
-
-        # if the message is in the whitelist channel then do this
-        
-        # for some stupid reason i have to convert both values to string to get them to compare right. without converting them even when they were the same python was saying that it was unequal
-        if (str(message.channel.id) == str(self.config.whitelist_channel)) and not (message.author.id == self.user.id):
-            await whitelist_from_channel(self, message)
-            return 0
+        (cmd, args, command_module_id) = self.command_handler.get_command(message.content)
             
-        if command is not None:
-            await self.command_handler.run_command(command, message)
+        if cmd is not None:
+
+            module_enabled = False
+
+            if command_module_id == 0:
+                module_enabled = True
+        
+            module_set_name = (str(message.guild.id) +  "_modules")
+
+            db_conn = redis.Redis(connection_pool=self.db.pool)
+        
+            pipe = db_conn.pipeline().get("owner_id").exists(module_set_name)
+
+            if command_module_id != 0:
+                pipe.sismember(module_set_name, str(command_module_id))
+
+            p = pipe.execute()
+            if p[1] == 0:
+                default_module_ids = [1,2]
+                pipe = db_conn.pipeline()
+                for x in default_module_ids:
+                    pipe.sadd(module_set_name, x)
+                pipe.execute()
+
+            owner_id = p[0]
+
+            if command_module_id != 0:
+                module_enabled = p[2]
+
+
+            is_owner = False
+            if owner_id is not None:
+                if int(owner_id.decode()) == message.author.id:
+                    is_owner = True
+        
+
+            if is_owner == True:
+                await cmd(self, args, message)
+                return
+
+            if module_enabled == False:
+                await message.channel.send("module is disabled")
+                return
+        
+            if (message.author.guild_permissions.administrator is True):
+                await message.channel.send("you dont have perms lol")
+                return
+
+            await cmd(self, args, message)
+                #await self.command_handler.run_command(command, message)
 
     def get_command(self, message):
         if message.content.startswith(self.config.prefix):

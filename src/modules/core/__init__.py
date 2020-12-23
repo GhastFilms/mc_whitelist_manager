@@ -4,9 +4,7 @@ sys.path.append(os.path.abspath("./src/modules/core/"))
 import help
 import module
 
-class Module:
-    module_id = 0
-    module_name = "core"
+from command import ModuleBuilder
 
-    def get_commands(self):
-        return [help.Command, module.Command]
+def get_module():
+    return ModuleBuilder("core", 0).add_command("module", module.get_dir()).add_command("help", help.help).build()
