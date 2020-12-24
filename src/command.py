@@ -128,35 +128,3 @@ class CommandHandlerBuilder:
 
     def build(self):
         return CommandHandler(self.dclient, self.command_map, self.module_map)
-
-if False:
-    z = CommandDirBuilder()
-
-    @z.command("add")
-    async def whitelist_add(dclient, args,  message):
-        print(message)
-
-    @z.command("list")
-    async def whitelist_list(dclient, args, message):
-        print(message)
-
-    @z.command("remove")
-    async def whitelist_remove(dclient, args, message):
-        print(message)
-
-    async def poggers(dclient, args, message):
-        print(message)
-
-    whitelist_dir = z.build()
-    mc_module = ModuleBuilder("minecraft", 2).add_command("whitelist", whitelist_dir).add_command("pog", poggers).build()
-
-    cmd_handler = CommandHandlerBuilder("e").add_module(mc_module).build()
-
-    test_strs = ["$whitelist add bob", "$whitelist list", "$whitelist remove bob", "$bpoo eieie iii", "$pog eiieiei"]
-    for strx in test_strs:
-        print("---------")
-        print(strx)
-        (x, args, mod_id) = cmd_handler.get_command(strx)
-        print(args)
-        if x is not None:
-            x("dclient", args, "message")
